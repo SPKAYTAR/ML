@@ -1,0 +1,13 @@
+# Python virtual environment
+.venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Large datasets
+data/
+
+# Saved neural network weights
+checkpoints/
+*.pth
