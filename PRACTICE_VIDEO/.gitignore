@@ -1,0 +1,28 @@
+# Python virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment variables
+.env
+
+# Downloaded datasets
+data/
+datasets/
+
+# Trained PyTorch models
+*.pth
+*.pt
+
+# Training logs
+runs/
+logs/
+
+# VS Code settings
+.vscode/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
