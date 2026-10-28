@@ -3,47 +3,46 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader  # Creates batches
-
-from models import CNN1, SAVE_MODEL
+import torchvision.transforms as transforms #dataset transformations
+from models import CNN1, SAVE_MODEL, LOAD_MODEL, CREATE_RESNET
 from train import TRAIN_CNN_MODEL
 from data import CIFAR_TRAIN_DATA, CIFAR_TEST_DATA
 from test import BENCHMARK,CHECK_ACCURACY
 
 
+
 # Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Hyperparameters
-learning_rate = 0.001
-batch_size = 64
-num_epochs = 10
 
+print("CUDA available:", torch.cuda.is_available())
+print("Selected device:", device)
 # Load CIFAR-10 training and testing batches
 train_loader = CIFAR_TRAIN_DATA(batch_size)
-test_loader = CIFAR_TEST_DATA(batch_size)
-
-# Initialize CNN on GPU
-model = CNN1(in_channels=3, num_classes=10).to(device)
-
-# Loss and optimizer
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-
-
-# Train CNN
-for runs in range(num_epochs):
-    TRAIN_CNN_MODEL(
-    1,
-    train_loader,
-    model,
-    device,
-    criterion,
-    optimizer
+train_loader.dataset.transform =transforms.Compose([
+    transforms.ToTensor(),  # Convert pixels from 0-255 to 0-1
+    transforms.Normalize(
+        mean=(0.4914, 0.4822, 0.4465),
+        std=(0.2023, 0.1994, 0.2010)
     )
-    CHECK_ACCURACY(test_loader,model,device)
+])
+test_loader = CIFAR_TEST_DATA(batch_size)
+test_loader.dataset.transform = transforms.Compose([
+    transforms.ToTensor(),  # Convert pixels from 0-255 to 0-1
+    transforms.Normalize(
+        mean=(0.4914, 0.4822, 0.4465),
+        std=(0.2023, 0.1994, 0.2010)
+    )
+])
 
-# Benchmark trained model
-BENCHMARK(model, test_loader, device)
 
-# Save trained weights
-SAVE_MODEL(model, "CIFAR10_CNN1")
+
+# Benchmark normal model
+print("===== RESNET =====")
+
+
+
+
+
+
+

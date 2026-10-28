@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader #dataset management, data batches etc
 import torchvision.datasets as datasets #helps import datasets, 
 import torchvision.transforms as transforms #dataset transformations
 
+import timm       # Creates models and loads pretrained weights
 
 
 #Create fully connected network
@@ -69,6 +70,105 @@ class CNN2(nn.Module):
         x=self.fc1(x)
 
         return x
+
+
+class ResidualBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, stride=1):
+        super().__init__()
+
+        # First convolution
+        self.conv1 = nn.Conv2d(
+            in_channels, out_channels,
+            kernel_size=3, stride=stride, padding=1, bias=False
+        )
+        self.bn1 = nn.BatchNorm2d(out_channels)
+
+        # Second convolution
+        self.conv2 = nn.Conv2d(
+            out_channels, out_channels,
+            kernel_size=3, stride=1, padding=1, bias=False
+        )
+        self.bn2 = nn.BatchNorm2d(out_channels)
+
+        self.relu = nn.ReLU()
+
+        # Match input dimensions when channels or image size change
+        self.shortcut = nn.Identity()
+
+        if stride != 1 or in_channels != out_channels:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(
+                    in_channels, out_channels,
+                    kernel_size=1, stride=stride, bias=False
+                ),
+                nn.BatchNorm2d(out_channels)
+            )
+
+    def forward(self, x):
+
+        # Save input for skip connection
+        identity = self.shortcut(x)
+
+        # Convolution path
+        out = self.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+
+        # Residual addition
+        out = out + identity
+
+        return self.relu(out)
+class ResNet18(nn.Module):
+    def __init__(self, num_classes=10):
+        super().__init__()
+
+        # Initial convolution: 32x32 -> 32x32
+        self.conv1 = nn.Conv2d(
+            3, 64, kernel_size=3, stride=1, padding=1, bias=False
+        )
+        self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU()
+
+        # Four stages of residual blocks
+        self.layer1 = self.make_layer(64, 64, blocks=2, stride=1)
+        self.layer2 = self.make_layer(64, 128, blocks=2, stride=2)
+        self.layer3 = self.make_layer(128, 256, blocks=2, stride=2)
+        self.layer4 = self.make_layer(256, 512, blocks=2, stride=2)
+
+        # Classification layers
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(512, num_classes)
+
+    # Creates a sequence of residual blocks
+    def make_layer(self, in_channels, out_channels, blocks, stride):
+
+        layers = []
+
+        # First block can change dimensions
+        layers.append(ResidualBlock(in_channels, out_channels, stride))
+
+        # Remaining blocks preserve dimensions
+        for _ in range(1, blocks):
+            layers.append(ResidualBlock(out_channels, out_channels))
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+
+        x = self.relu(self.bn1(self.conv1(x)))
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+
+        x = self.avgpool(x)
+
+        # Flatten for fully connected layer
+        x = torch.flatten(x, 1)
+
+        x = self.fc(x)
+
+        return x
 #class CNN2(nn.Module): #handcrafted kernels
 def SAVE_MODEL(model,name):
     torch.save(model.state_dict(), name + ".pth")
@@ -76,3 +176,16 @@ def SAVE_MODEL(model,name):
 def LOAD_MODEL(model,name,device):
     model.load_state_dict(torch.load(name + ".pth", map_location=device, weights_only=True))
 
+def CREATE_RESNET(device):
+    model = timm.create_model("resnet18", pretrained=False, num_classes=10)
+
+# Adjust architecture for CIFAR-10 (32x32 images)
+    model.conv1 = nn.Conv2d(
+    3, 64, kernel_size=3, stride=1, padding=1, bias=False
+    )
+
+    # Remove initial max pooling
+    model.maxpool = nn.Identity()
+    LOAD_MODEL(model,"RESNET",device)
+    model = model.to(device)
+    return model

@@ -48,3 +48,12 @@ Inference time per image (batched)	0.035 ms
 Throughput	28,810 images/sec
 
 Note: No cropping or data augmentation. Standard CNN with 2 convolutional layers, trained on CIFAR-10.
+
+resnet
+
+Accuracy:        94.98%
+Parameters:      11,173,962
+Weight size:     42.63 MiB
+Inference time:  78.471 seconds
+Latency:         7.847 ms/image
+Throughput:      127 images/sec
